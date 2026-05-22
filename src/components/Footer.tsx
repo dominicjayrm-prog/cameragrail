@@ -12,6 +12,7 @@ const cols = [
       { href: '/format/medium-format', label: 'Medium format' },
       { href: '/format/35mm-rangefinder', label: 'Rangefinders' },
       { href: '/price-index', label: 'Price index' },
+      { href: '/blog', label: 'Blog' },
     ],
   },
   {
