@@ -6,7 +6,7 @@ App Router, Supabase, and a clean entity-catalogue SEO model. See
 strategy and [CAMERAGRAIL_BUILD_PROMPT.md](./CAMERAGRAIL_BUILD_PROMPT.md) for
 the original build brief.
 
-## What is here (phases 1 to 4)
+## What is here (phases 1 to 4, plus 5/7/8/9)
 
 - Next.js 14 App Router project with TypeScript strict mode and Tailwind CSS
 - Inter + Spline Sans fonts via next/font/google
@@ -25,13 +25,27 @@ the original build brief.
 - Mock eBay service (`lib/ebay.ts`) with affiliate URL builder, ready to swap
   for real Browse + Marketplace Insights credentials
 - Dynamic sitemap and robots.txt
+- Magic-link authentication via Supabase Auth, with middleware that refreshes
+  the session cookie on every request
+- `/submit` form for proposing new cameras, with optional photo upload to a
+  public Supabase Storage bucket (`submission-photos`, 5MB cap, image MIME
+  types only)
+- `/log-sale` form for community price reporting
+- `/admin/moderation` queue gated by an `ADMIN_EMAILS` allowlist; approving a
+  new-camera submission publishes a `cameras` row, approving a sale-log
+  inserts a `sold_listings` row and recomputes the model's condition-adjusted
+  value range plus a fresh `price_history` row
+- `/account` page showing your submissions, their status, and your approved
+  contribution count
+- `cameragrail.handle_new_user()` trigger auto-creates a profile row when a
+  new auth user signs up
 
 ## What is not here yet (later phases)
 
-- Community submission forms and moderation queue (Phase 5)
-- Magic-link auth and account / collection pages (Phase 9)
-- Vercel cron + price refresh job (Phase 3)
+- Vercel cron + real eBay price refresh job (Phase 5/6, architecture in place)
 - Marketplace Insights wiring (Phase 6, behind a feature flag)
+- Valuation tool with email capture + Plausible/Clarity analytics (Phase 10)
+- Collection tracker on `/account` (Phase 9)
 
 ## Running locally
 
@@ -52,6 +66,18 @@ the original build brief.
    ```
    The app renders with the bundled seed catalogue out of the box. Once you
    run the seed script, it reads from Supabase instead.
+
+## Configure Supabase auth
+
+For magic-link sign-in to redirect back to the app, add the relevant
+callback URLs in **Supabase dashboard → Authentication → URL Configuration**:
+
+- Local dev: `http://localhost:3000/auth/callback`
+- Production: `https://cameragrail.com/auth/callback` (or your domain)
+
+Set `ADMIN_EMAILS` in `.env.local` to a comma-separated list of emails that
+should see the moderation queue link in the nav and have access to
+`/admin/moderation`.
 
 ## Expose the schema
 
