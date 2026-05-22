@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: theme('colors.paper');
+  color: theme('colors.ink');
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@layer components {
+  .lu {
+    position: relative;
+  }
+  .lu::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 2px;
+    width: 0;
+    background: theme('colors.blue.DEFAULT');
+    transition: width 0.28s;
+  }
+  .lu:hover::after {
+    width: 100%;
+  }
+  .cardh {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .cardh:hover {
+    transform: translateY(-4px);
+    box-shadow: theme('boxShadow.lift');
+    border-color: #cbd8ea;
+  }
+  .btn-primary {
+    background: theme('colors.navy');
+    color: #fff;
+    transition: background 0.2s;
+  }
+  .btn-primary:hover {
+    background: theme('colors.navy2');
+  }
+  .btn-accent {
+    background: theme('colors.blue.DEFAULT');
+    color: #fff;
+    transition: background 0.2s;
+  }
+  .btn-accent:hover {
+    background: theme('colors.blue.soft');
+  }
+}
+
+@layer utilities {
+  .rise-1 {
+    animation-delay: 0.07s;
+  }
+  .rise-2 {
+    animation-delay: 0.14s;
+  }
+  .rise-3 {
+    animation-delay: 0.21s;
+  }
+  .rise-4 {
+    animation-delay: 0.28s;
+  }
+}
