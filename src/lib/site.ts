@@ -12,3 +12,14 @@ export const SITE_NAME = 'CameraGrail';
 export const SITE_TAGLINE = 'Camera Values, Specs, and Price History';
 export const VALUE_DISCLAIMER =
   'Values are estimates based on real sale data and are not formal appraisals.';
+
+// Multi-tenant identity. The `siteKey` is HARDCODED on purpose: in a previous
+// project this came from process.env.SITE_KEY and a misconfigured Vercel env
+// var silently broke every `site = SITE.siteKey` filter in production. The
+// constant eliminates that failure mode.
+export const SITE = {
+  name: 'CameraGrail',
+  url: siteUrl(),
+  siteKey: 'cameragrail.com',
+  founder: 'CameraGrail Editors',
+} as const;

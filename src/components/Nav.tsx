@@ -9,7 +9,8 @@ const items = [
   { href: '/browse', label: 'Browse' },
   { href: '/brand', label: 'Brands' },
   { href: '/price-index', label: 'Price Index' },
-  { href: '/submit', label: 'Submit a Camera' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/submit', label: 'Submit' },
 ];
 
 export async function Nav() {
@@ -33,9 +34,17 @@ export async function Nav() {
             </Link>
           ))}
           {admin ? (
-            <Link href="/admin/moderation" className="lu text-blue font-semibold">
-              Moderation
-            </Link>
+            <>
+              <Link href="/admin/blog" className="lu text-blue font-semibold">
+                Blog admin
+              </Link>
+              <Link
+                href="/admin/moderation"
+                className="lu text-blue font-semibold"
+              >
+                Moderation
+              </Link>
+            </>
           ) : null}
           <CurrencyToggle active={currency} next={pathname} />
           {user ? (

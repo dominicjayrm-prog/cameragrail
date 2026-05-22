@@ -6,7 +6,7 @@ App Router, Supabase, and a clean entity-catalogue SEO model. See
 strategy and [CAMERAGRAIL_BUILD_PROMPT.md](./CAMERAGRAIL_BUILD_PROMPT.md) for
 the original build brief.
 
-## What is here (phases 1 to 4, plus 5/7/8/9)
+## What is here (phases 1 to 4, plus 5/7/8/9, plus blog CMS)
 
 - Next.js 14 App Router project with TypeScript strict mode and Tailwind CSS
 - Inter + Spline Sans fonts via next/font/google
@@ -39,6 +39,19 @@ the original build brief.
   contribution count
 - `cameragrail.handle_new_user()` trigger auto-creates a profile row when a
   new auth user signs up
+- **Blog CMS** at `/admin/blog`: TipTap v3 rich-text editor, live SEO scanner
+  with 11 checks, auto-slug, auto-read-time, cover image preview, tag input,
+  featured toggle, save-as-draft and publish flows. Backed by
+  `cameragrail.blog_posts` with the `site` column hardcoded to
+  `cameragrail.com` so the multi-tenant pattern is preserved
+- Public blog at `/blog` (force-dynamic to avoid stale empty states) and
+  `/blog/[slug]` (revalidate every 60s) with full Article JSON-LD,
+  BreadcrumbList, author card, and related-by-category linking
+- `ExternalLink` component enforces `rel="nofollow noopener noreferrer"` on
+  every outbound link; the TipTap link extension applies the same rel
+- Cornerstone-post seeder at `scripts/seed-blog.ts` reads HTML files from
+  `content/blog/` and emits ON-CONFLICT-safe INSERT statements pipeable into
+  the Supabase MCP or SQL editor (`npm run seed:blog > seed-blog.sql`)
 
 ## What is not here yet (later phases)
 
