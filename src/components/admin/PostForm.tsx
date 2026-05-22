@@ -7,6 +7,14 @@ import { SeoScanner } from './SeoScanner';
 import { wordCount, estimateReadTime } from '@/lib/blog';
 import { slugify } from '@/lib/slug';
 
+function safePreviewUrl(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed;
+}
+
 export interface PostFormValues {
   id?: string;
   slug: string;
@@ -280,13 +288,17 @@ export function PostForm({ mode, initial, defaultAuthor, categories }: Props) {
               placeholder="Describe the image"
             />
           </div>
-          {values.cover_image ? (
+          {safePreviewUrl(values.cover_image) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={values.cover_image}
+              src={safePreviewUrl(values.cover_image)!}
               alt={values.cover_image_alt || 'Cover preview'}
               className="mt-4 rounded-[10px] border border-line max-h-64 object-cover"
             />
+          ) : values.cover_image ? (
+            <p className="text-xs text-down mt-4">
+              That URL is not allowed in cover images. Use http(s) only.
+            </p>
           ) : null}
         </fieldset>
 

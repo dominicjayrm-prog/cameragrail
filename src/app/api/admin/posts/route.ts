@@ -5,6 +5,13 @@ import { getCurrentUser } from '@/lib/supabase/ssr';
 import { SITE } from '@/lib/site';
 import { slugify } from '@/lib/slug';
 
+function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : null;
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!isAdminEmail(user?.email)) {
@@ -37,7 +44,7 @@ export async function POST(request: Request) {
     category: body.category ?? null,
     excerpt: body.excerpt ?? null,
     content: body.content ?? null,
-    cover_image: body.cover_image ?? null,
+    cover_image: safeHttpUrl(body.cover_image),
     cover_image_alt: body.cover_image_alt ?? null,
     meta_title: body.meta_title ?? null,
     meta_description: body.meta_description ?? null,

@@ -6,6 +6,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { adminDb } from '@/lib/admin';
 import { SITE, absoluteUrl } from '@/lib/site';
 import { breadcrumbsJsonLd } from '@/lib/schema';
+import { sanitizeBlogHtml, safeUrl } from '@/lib/sanitize';
 import type { BlogPost } from '@/lib/blog';
 
 interface Props {
@@ -51,6 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = post.meta_title ?? post.seo_title ?? post.title;
   const description =
     post.meta_description ?? post.seo_description ?? post.excerpt ?? undefined;
+  const ogImage = safeUrl(post.cover_image);
   return {
     title,
     description: description ?? undefined,
@@ -59,7 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: 'article',
       title,
       description: description ?? undefined,
-      images: post.cover_image ? [{ url: post.cover_image }] : undefined,
+      images: ogImage ? [{ url: ogImage }] : undefined,
       publishedTime: post.published_at ?? undefined,
       modifiedTime: post.updated_at,
       authors: post.author_name ? [post.author_name] : undefined,
@@ -71,6 +73,8 @@ export default async function BlogPostPage({ params }: Props) {
   const post = await fetchPost(params.slug);
   if (!post) notFound();
   const related = await fetchRelated(post);
+  const safeCover = safeUrl(post.cover_image);
+  const sanitizedHtml = sanitizeBlogHtml(post.content ?? '');
 
   const breadcrumbs = [
     { label: 'Home', href: '/' },
@@ -140,18 +144,18 @@ export default async function BlogPostPage({ params }: Props) {
           </p>
         </header>
 
-        {post.cover_image ? (
+        {safeCover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={post.cover_image}
+            src={safeCover}
             alt={post.cover_image_alt ?? post.title}
             className="w-full rounded-card mb-10"
           />
         ) : null}
 
         <div
-          className="prose prose-cg max-w-none"
-          dangerouslySetInnerHTML={{ __html: post.content ?? '' }}
+          className="prose-cg max-w-none"
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
 
         <AuthorCard name={post.author_name ?? SITE.founder} />

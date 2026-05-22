@@ -13,9 +13,9 @@ import { supabaseAnon } from './supabase/server';
 
 export { isAdminEmail };
 
-export async function requireAdmin() {
+export async function requireAdmin(nextPath = '/admin/blog') {
   const user = await getCurrentUser();
-  if (!user) redirect('/login?next=/admin/blog');
+  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   if (!isAdminEmail(user.email)) redirect('/login?error=not_authorised');
   return user;
 }

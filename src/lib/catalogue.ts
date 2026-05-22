@@ -74,8 +74,15 @@ export async function listCameras(options: {
     query = query.range(options.offset, options.offset + options.limit - 1);
   }
   const { data, error } = await query;
-  if (error || !data || data.length === 0) return filterSeed(seedAsCameras(), options);
-  return data as Camera[];
+  // Soft-fallback only on hard error (e.g. schema not exposed, network).
+  // Empty results from a configured Supabase are passed through so an admin
+  // can verify the live catalogue is truly empty without seed data masking
+  // it.
+  if (error) {
+    console.error('[catalogue] listCameras failed:', error);
+    return filterSeed(seedAsCameras(), options);
+  }
+  return (data ?? []) as Camera[];
 }
 
 function filterSeed(
@@ -108,12 +115,15 @@ export async function getCameraBySlug(
     .eq('slug', fullSlug)
     .eq('published', true)
     .maybeSingle();
-  if (error || !data) {
-    return seedAsCameras().find(
-      (c) => c.brand_slug === brandSlug && c.slug === fullSlug,
-    ) ?? null;
+  if (error) {
+    console.error('[catalogue] getCameraBySlug failed:', error);
+    return (
+      seedAsCameras().find(
+        (c) => c.brand_slug === brandSlug && c.slug === fullSlug,
+      ) ?? null
+    );
   }
-  return data as Camera;
+  return (data as Camera) ?? null;
 }
 
 export async function getConditionValues(cameraId: string): Promise<ConditionValue[]> {

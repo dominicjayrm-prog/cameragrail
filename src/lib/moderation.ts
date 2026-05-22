@@ -65,7 +65,15 @@ export async function getSubmission(id: string): Promise<SubmissionRow | null> {
   return data as SubmissionRow;
 }
 
-export async function approveSubmission(id: string, note: string | null) {
+export interface ApprovalResult {
+  brandSlug: string | null;
+  modelPath: string | null;
+}
+
+export async function approveSubmission(
+  id: string,
+  note: string | null,
+): Promise<ApprovalResult> {
   const supabase = supabaseService();
   const submission = await getSubmission(id);
   if (!submission) throw new Error('Submission not found');
@@ -73,10 +81,11 @@ export async function approveSubmission(id: string, note: string | null) {
     throw new Error('Submission already reviewed');
   }
 
+  let result: ApprovalResult = { brandSlug: null, modelPath: null };
   if (submission.type === 'new_camera') {
-    await approveNewCamera(submission);
+    result = await approveNewCamera(submission);
   } else if (submission.type === 'sale_log') {
-    await approveSaleLog(submission);
+    result = await approveSaleLog(submission);
   }
 
   await supabase
@@ -101,6 +110,8 @@ export async function approveSubmission(id: string, note: string | null) {
       .update({ contributions_count: current + 1 })
       .eq('id', submission.submitted_by);
   }
+
+  return result;
 }
 
 export async function rejectSubmission(id: string, note: string | null) {
@@ -115,7 +126,7 @@ export async function rejectSubmission(id: string, note: string | null) {
     .eq('id', id);
 }
 
-async function approveNewCamera(submission: SubmissionRow) {
+async function approveNewCamera(submission: SubmissionRow): Promise<ApprovalResult> {
   const payload = submission.payload as NewCameraPayload;
   const supabase = supabaseService();
   const brand_slug = slugify(payload.brand);
@@ -150,11 +161,25 @@ async function approveNewCamera(submission: SubmissionRow) {
     },
     { onConflict: 'slug' },
   );
+
+  return {
+    brandSlug: brand_slug,
+    modelPath: slug.startsWith(`${brand_slug}-`)
+      ? slug.slice(brand_slug.length + 1)
+      : slug,
+  };
 }
 
-async function approveSaleLog(submission: SubmissionRow) {
+async function approveSaleLog(submission: SubmissionRow): Promise<ApprovalResult> {
   const payload = submission.payload as SaleLogPayload;
   const supabase = supabaseService();
+
+  if (!payload.camera_id) {
+    // The form should reject seed-prefixed IDs before they reach moderation,
+    // but if a legacy submission slips through we skip the value write.
+    console.warn('[moderation] sale_log with null camera_id, skipping');
+    return { brandSlug: null, modelPath: null };
+  }
 
   await supabase.from('sold_listings').insert({
     camera_id: payload.camera_id,
@@ -167,6 +192,21 @@ async function approveSaleLog(submission: SubmissionRow) {
   });
 
   await recomputeCameraValue(payload.camera_id);
+
+  const { data } = await supabase
+    .from('cameras')
+    .select('brand_slug, slug')
+    .eq('id', payload.camera_id)
+    .maybeSingle();
+  if (!data) return { brandSlug: null, modelPath: null };
+  const brand_slug = data.brand_slug as string;
+  const slug = data.slug as string;
+  return {
+    brandSlug: brand_slug,
+    modelPath: slug.startsWith(`${brand_slug}-`)
+      ? slug.slice(brand_slug.length + 1)
+      : slug,
+  };
 }
 
 // Recompute condition-adjusted value range from approved community sales,
@@ -181,20 +221,29 @@ async function recomputeCameraValue(cameraId: string) {
     .eq('is_outlier', false)
     .not('sale_price', 'is', null);
 
-  if (!sales || sales.length === 0) return;
+  if (!sales || sales.length === 0) {
+    console.warn(`[moderation] no community sales for ${cameraId}; value left unchanged`);
+    return;
+  }
 
   const prices = sales
     .map((s) => s.sale_price as number)
     .filter((p): p is number => typeof p === 'number')
     .sort((a, b) => a - b);
-  if (prices.length === 0) return;
+  if (prices.length === 0) {
+    console.warn(`[moderation] no usable sale prices for ${cameraId}; value left unchanged`);
+    return;
+  }
 
   const medianRaw = prices[Math.floor(prices.length / 2)];
   // Outlier filter: drop anything more than 3x the median or below 1/3.
   const filtered = prices.filter(
     (p) => p >= medianRaw / 3 && p <= medianRaw * 3,
   );
-  if (filtered.length === 0) return;
+  if (filtered.length === 0) {
+    console.warn(`[moderation] all sales filtered as outliers for ${cameraId}; value left unchanged`);
+    return;
+  }
 
   const value_low = percentile(filtered, 0.2);
   const value_median = percentile(filtered, 0.5);

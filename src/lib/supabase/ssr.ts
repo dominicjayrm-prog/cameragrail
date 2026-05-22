@@ -38,10 +38,20 @@ export function supabaseServerClient() {
 
 // Returns the current authenticated user or null. Use this in Server
 // Components and Server Actions to gate behaviour.
+//
+// We deliberately do not treat the very common "AuthSessionMissingError"
+// (no cookie) as an error; everything else is logged so a degraded auth
+// system surfaces in the server logs rather than silently locking users
+// out as "not signed in".
 export async function getCurrentUser() {
   const supabase = supabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
-  if (error) return null;
+  if (error) {
+    if (error.name !== 'AuthSessionMissingError') {
+      console.error('[auth] getUser failed:', error.message);
+    }
+    return null;
+  }
   return data.user ?? null;
 }
 

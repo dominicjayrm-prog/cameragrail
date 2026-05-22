@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function NewPostPage() {
-  await requireAdmin();
+  await requireAdmin('/admin/blog/new');
   const categories = await fetchCategories();
   return (
     <div className="max-w-page mx-auto px-7 py-10">

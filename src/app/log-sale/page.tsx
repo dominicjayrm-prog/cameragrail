@@ -52,7 +52,11 @@ export default async function LogSalePage({ searchParams }: Props) {
 
   // Fetch the camera list once for the dropdown. We cap at 500 because this is
   // server-rendered; once the catalogue is large this becomes a typeahead.
-  const cameras = await listCameras({ limit: 500 });
+  // Seed-prefixed IDs are filtered out: they are local-dev placeholders that
+  // would break the foreign-key on the submissions/sold_listings tables.
+  const cameras = (await listCameras({ limit: 500 })).filter(
+    (c) => !c.id.startsWith('seed-'),
+  );
 
   async function submitSale(formData: FormData) {
     'use server';
@@ -68,6 +72,9 @@ export default async function LogSalePage({ searchParams }: Props) {
 
     if (!cameraId || !priceRaw || !condition) {
       return redirect('/log-sale?error=missing_fields');
+    }
+    if (cameraId.startsWith('seed-')) {
+      return redirect('/log-sale?error=seed_camera_unsupported');
     }
 
     const price = parseFloat(priceRaw);
@@ -90,7 +97,7 @@ export default async function LogSalePage({ searchParams }: Props) {
     const { error } = await supabase.from('submissions').insert({
       type: 'sale_log',
       submitted_by: u.id,
-      camera_id: cameraId.startsWith('seed-') ? null : cameraId,
+      camera_id: cameraId,
       payload,
       status: 'pending',
     });
@@ -138,10 +145,13 @@ export default async function LogSalePage({ searchParams }: Props) {
             name="camera_id"
             required
             defaultValue=""
-            className="w-full bg-white border border-line rounded-[10px] px-4 py-2.5 outline-none focus:border-blue"
+            disabled={cameras.length === 0}
+            className="w-full bg-white border border-line rounded-[10px] px-4 py-2.5 outline-none focus:border-blue disabled:bg-paper disabled:text-slate"
           >
             <option value="" disabled>
-              Choose a model…
+              {cameras.length === 0
+                ? 'No cameras in the catalogue yet'
+                : 'Choose a model…'}
             </option>
             {cameras.map((c) => (
               <option key={c.id} value={c.id}>

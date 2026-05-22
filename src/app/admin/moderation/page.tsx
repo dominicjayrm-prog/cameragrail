@@ -56,10 +56,14 @@ export default async function ModerationPage() {
     }
     const id = String(formData.get('id') ?? '');
     const note = String(formData.get('note') ?? '').trim() || null;
-    await approveSubmission(id, note);
+    const { brandSlug, modelPath } = await approveSubmission(id, note);
     revalidatePath('/admin/moderation');
     revalidatePath('/');
-    revalidatePath('/browse');
+    revalidatePath('/price-index');
+    if (brandSlug && modelPath) {
+      revalidatePath(`/camera/${brandSlug}/${modelPath}`);
+      revalidatePath(`/brand/${brandSlug}`);
+    }
   }
 
   async function reject(formData: FormData) {

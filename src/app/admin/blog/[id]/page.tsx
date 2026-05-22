@@ -18,7 +18,7 @@ interface Props {
 }
 
 export default async function EditPostPage({ params }: Props) {
-  await requireAdmin();
+  await requireAdmin(`/admin/blog/${params.id}`);
   const db = adminDb();
   const { data: post, error } = await db
     .from('blog_posts')

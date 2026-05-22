@@ -2,24 +2,40 @@ import Link from 'next/link';
 import { SearchBar } from '@/components/SearchBar';
 import { CameraCard } from '@/components/CameraCard';
 import { JsonLd } from '@/components/JsonLd';
-import { listCameras, listFormats } from '@/lib/catalogue';
+import { listBrands, listCameras, listFormats } from '@/lib/catalogue';
 import { formatFromPenceGBP } from '@/lib/currency';
 import { readCurrencyCookie } from '@/lib/currency-server';
 import { organizationJsonLd, websiteJsonLd } from '@/lib/schema';
 
 const POPULAR = ['Canon AE-1', 'Nikon F3', 'Olympus OM-1', 'Mamiya RB67', 'Contax T2'];
 
-const STATS = [
-  { n: '41,800', l: 'Cameras catalogued' },
-  { n: '2.4M', l: 'Real sale records' },
-  { n: '1,100+', l: 'Brands and makers' },
-  { n: 'Daily', l: 'Price updates' },
-];
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
+  return n.toLocaleString('en-GB');
+}
 
 export default async function HomePage() {
   const currency = readCurrencyCookie();
-  const featured = (await listCameras({ limit: 6 })).slice(0, 6);
+  // Fetch a large window so the count is accurate up to 5,000 models without
+  // a dedicated `count(*)` round-trip. Replace with a Supabase head:'count'
+  // query once the catalogue exceeds that.
+  const allCameras = await listCameras({ limit: 5000 });
+  const featured = allCameras.slice(0, 6);
   const formats = await listFormats();
+  const brands = await listBrands();
+
+  const stats = [
+    { n: formatCount(allCameras.length), l: 'Cameras catalogued' },
+    { n: formatCount(brands.length), l: 'Brands and makers' },
+    { n: formatCount(formats.length), l: 'Formats covered' },
+    { n: 'Daily', l: 'Price updates' },
+  ];
+
+  const heroBadge =
+    allCameras.length > 0
+      ? `${formatCount(allCameras.length)} cameras catalogued, prices updated daily`
+      : 'Catalogue launching soon, prices updated daily';
 
   return (
     <>
@@ -38,7 +54,7 @@ export default async function HomePage() {
         <div className="max-w-page mx-auto relative">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue/10 text-blue rounded-pill text-[13px] font-semibold mb-7 animate-rise">
             <span className="w-1.5 h-1.5 rounded-full bg-blue" />
-            41,800 cameras catalogued, prices updated daily
+            {heroBadge}
           </div>
 
           <h1 className="font-head text-[clamp(46px,6.4vw,84px)] leading-[1.03] font-bold tracking-[-0.035em] max-w-[900px] mb-6 text-navy animate-rise rise-1">
@@ -73,7 +89,7 @@ export default async function HomePage() {
       {/* STATS */}
       <section className="border-y border-line bg-white">
         <div className="max-w-page mx-auto px-7 py-8 grid grid-cols-2 md:grid-cols-4 gap-5">
-          {STATS.map((s) => (
+          {stats.map((s) => (
             <div key={s.l}>
               <p className="font-head text-[33px] font-bold tracking-[-0.02em] leading-none text-navy">
                 {s.n}
@@ -137,9 +153,21 @@ export default async function HomePage() {
               specs, and a live link to current listings.
             </p>
             {[
-              { n: '01', t: 'Search any model', d: '41,800 cameras and lenses, fully catalogued.' },
-              { n: '02', t: 'See the real range', d: 'Condition-adjusted values from millions of actual sales.' },
-              { n: '03', t: 'Buy, sell, or hold', d: 'Live links to current listings, plus price-trend history.' },
+              {
+                n: '01',
+                t: 'Search any model',
+                d: 'The catalogue grows weekly with new cameras and lenses.',
+              },
+              {
+                n: '02',
+                t: 'See the real range',
+                d: 'Condition-adjusted values from recent sale data.',
+              },
+              {
+                n: '03',
+                t: 'Buy, sell, or hold',
+                d: 'Live links to current listings, plus price-trend history.',
+              },
             ].map((s) => (
               <div key={s.n} className="flex gap-4 items-start mb-4 last:mb-0">
                 <p className="font-head text-[17px] text-blue-soft font-bold min-w-[26px]">
@@ -231,7 +259,10 @@ function SampleCard({ currency }: { currency: ReturnType<typeof readCurrencyCook
     { c: 'For parts', low: 2500, high: 5000, w: '20%' },
   ];
   return (
-    <div className="bg-paper text-ink rounded-[18px] p-7 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.55)]">
+    <div className="bg-paper text-ink rounded-[18px] p-7 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.55)] relative">
+      <span className="absolute top-4 right-4 text-[10px] uppercase tracking-[0.1em] font-bold text-slate bg-white border border-line px-2 py-1 rounded-pill">
+        Example
+      </span>
       <div className="flex justify-between items-start mb-5">
         <div>
           <p className="font-head text-[27px] font-bold tracking-[-0.02em] text-navy">
@@ -241,9 +272,6 @@ function SampleCard({ currency }: { currency: ReturnType<typeof readCurrencyCook
             1972–1979 · 35mm SLR · Japan
           </p>
         </div>
-        <span className="text-xs font-bold text-success bg-success/10 px-2.5 py-1 rounded-pill">
-          ▲ +9%
-        </span>
       </div>
       <div className="bg-white border border-line rounded-[13px] p-5 mb-4">
         <p className="text-[11.5px] text-slate/80 uppercase tracking-[0.06em] mb-3">

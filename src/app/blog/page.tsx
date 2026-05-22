@@ -5,6 +5,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { adminDb } from '@/lib/admin';
 import { SITE } from '@/lib/site';
 import { breadcrumbsJsonLd, collectionPageJsonLd } from '@/lib/schema';
+import { safeUrl } from '@/lib/sanitize';
 import type { BlogPost } from '@/lib/blog';
 
 // IMPORTANT: do not ISR the index. The shared CMS pattern across the
@@ -106,15 +107,16 @@ function EmptyState({ error }: { error: string | null }) {
 }
 
 function FeaturedCard({ post }: { post: BlogPost }) {
+  const cover = safeUrl(post.cover_image);
   return (
     <Link
       href={`/blog/${post.slug}`}
       className="cardh block bg-white border border-line rounded-card overflow-hidden md:grid md:grid-cols-2"
     >
-      {post.cover_image ? (
+      {cover ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={post.cover_image}
+          src={cover}
           alt={post.cover_image_alt ?? post.title}
           className="w-full h-full object-cover aspect-[16/10] md:aspect-auto"
         />
@@ -145,15 +147,16 @@ function FeaturedCard({ post }: { post: BlogPost }) {
 }
 
 function PostCard({ post }: { post: BlogPost }) {
+  const cover = safeUrl(post.cover_image);
   return (
     <Link
       href={`/blog/${post.slug}`}
       className="cardh block bg-white border border-line rounded-card overflow-hidden"
     >
-      {post.cover_image ? (
+      {cover ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={post.cover_image}
+          src={cover}
           alt={post.cover_image_alt ?? post.title}
           className="w-full aspect-[16/10] object-cover"
         />
