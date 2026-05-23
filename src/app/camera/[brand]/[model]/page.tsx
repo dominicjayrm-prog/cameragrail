@@ -73,6 +73,9 @@ export default async function CameraPage({ params }: Props) {
   const query = `${camera.brand} ${camera.model}`;
   const affiliateUrl = buildSearchUrl(query);
   const showChart = history.length >= MIN_HISTORY_POINTS;
+  const hasValues =
+    camera.value_low != null || camera.value_median != null || camera.value_high != null;
+  const headlinePrefix = hasValues ? 'Value and Price Guide' : 'Specs and History';
 
   const faqs = buildFaqs(camera, currency);
   const breadcrumbs = [
@@ -101,11 +104,12 @@ export default async function CameraPage({ params }: Props) {
               {camera.format}
             </p>
             <h1 className="font-head text-[clamp(36px,5vw,60px)] font-bold tracking-[-0.03em] leading-[1.05] text-navy">
-              {camera.brand} {camera.model} Value and Price Guide ({years})
+              {camera.brand} {camera.model} {headlinePrefix} ({years})
             </h1>
             <p className="text-[17px] text-slate mt-3 max-w-[760px]">
-              Condition-adjusted values, full specifications, production history,
-              and live links to current listings.
+              {hasValues
+                ? 'Condition-adjusted values, full specifications, production history, and live links to current listings.'
+                : 'Full specifications, production history, and live links to current listings on eBay.'}
             </p>
           </div>
           <div className="flex flex-col gap-3 items-start lg:items-end">
@@ -121,21 +125,45 @@ export default async function CameraPage({ params }: Props) {
           </div>
         </header>
 
-        <section className="grid lg:grid-cols-3 gap-6 mb-12">
-          <ValueStat
-            label="Low (good)"
-            value={formatFromPenceGBP(camera.value_low, currency)}
-          />
-          <ValueStat
-            label="Median (excellent)"
-            value={formatFromPenceGBP(camera.value_median, currency)}
-            accent
-          />
-          <ValueStat
-            label="High (mint)"
-            value={formatFromPenceGBP(camera.value_high, currency)}
-          />
-        </section>
+        {hasValues ? (
+          <section className="grid lg:grid-cols-3 gap-6 mb-12">
+            <ValueStat
+              label="Low (good)"
+              value={formatFromPenceGBP(camera.value_low, currency)}
+            />
+            <ValueStat
+              label="Median (excellent)"
+              value={formatFromPenceGBP(camera.value_median, currency)}
+              accent
+            />
+            <ValueStat
+              label="High (mint)"
+              value={formatFromPenceGBP(camera.value_high, currency)}
+            />
+          </section>
+        ) : (
+          <section className="bg-white border border-line rounded-card p-7 mb-12 grid md:grid-cols-[1fr_auto] gap-5 items-center">
+            <div>
+              <p className="text-[12.5px] font-bold tracking-[0.12em] text-blue uppercase mb-2">
+                Market value
+              </p>
+              <p className="font-head text-2xl font-bold text-navy mb-1">
+                Research in progress
+              </p>
+              <p className="text-sm text-slate max-w-[560px]">
+                We are still building the price history for this model. Until then,
+                use the eBay search to see what is currently for sale, or log a
+                recent sale you witnessed to seed the data.
+              </p>
+            </div>
+            <Link
+              href="/log-sale"
+              className="bg-transparent text-navy border-[1.5px] border-[#C2D0E4] px-5 py-2.5 rounded-pill text-sm font-semibold hover:bg-paper transition-colors whitespace-nowrap"
+            >
+              Log a sale
+            </Link>
+          </section>
+        )}
 
         {conditions.length > 0 ? (
           <section className="mb-12">
@@ -234,8 +262,43 @@ export default async function CameraPage({ params }: Props) {
             </div>
           </section>
         ) : null}
+
+        {camera.source_url ? <SourceAttribution camera={camera} /> : null}
       </article>
     </>
+  );
+}
+
+function SourceAttribution({
+  camera,
+}: {
+  camera: NonNullable<Awaited<ReturnType<typeof getCameraBySlug>>>;
+}) {
+  return (
+    <aside className="mt-10 pt-6 border-t border-line text-xs text-slate">
+      <p>
+        Source data:{' '}
+        <a
+          href={camera.source_url ?? '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="lu text-navy font-semibold"
+        >
+          {camera.source_attribution ?? camera.source_url}
+        </a>
+        {camera.source_license ? (
+          <>
+            {' · '}
+            <span>Redistributed under {camera.source_license}</span>
+          </>
+        ) : null}
+        . CameraGrail editors review and augment imported data; please
+        <Link className="lu text-navy font-semibold ml-1" href="/contact">
+          flag corrections
+        </Link>
+        .
+      </p>
+    </aside>
   );
 }
 
@@ -299,13 +362,24 @@ function buildFaqs(
   camera: NonNullable<Awaited<ReturnType<typeof getCameraBySlug>>>,
   currency: ReturnType<typeof readCurrencyCookie>,
 ): Array<{ q: string; a: string }> {
-  const low = formatFromPenceGBP(camera.value_low, currency);
-  const high = formatFromPenceGBP(camera.value_high, currency);
-  const median = formatFromPenceGBP(camera.value_median, currency);
+  const hasValues =
+    camera.value_low != null || camera.value_median != null || camera.value_high != null;
+  const valueAnswer = hasValues
+    ? `A ${camera.brand} ${camera.model} in working condition typically sells for ${formatFromPenceGBP(
+        camera.value_low,
+        currency,
+      )} to ${formatFromPenceGBP(
+        camera.value_high,
+        currency,
+      )}, with a median around ${formatFromPenceGBP(
+        camera.value_median,
+        currency,
+      )}. Mint or boxed examples can exceed the top of this range; non-working "for parts" bodies sell well below it.`
+    : `Pricing research for the ${camera.brand} ${camera.model} is in progress. Check current eBay listings via the link above for a real-time snapshot, and log any sale you have witnessed to help build the price history.`;
   return [
     {
       q: `How much is a ${camera.brand} ${camera.model} worth?`,
-      a: `A ${camera.brand} ${camera.model} in working condition typically sells for ${low} to ${high}, with a median around ${median}. Mint or boxed examples can exceed the top of this range; non-working "for parts" bodies sell well below it.`,
+      a: valueAnswer,
     },
     {
       q: `When was the ${camera.brand} ${camera.model} made?`,

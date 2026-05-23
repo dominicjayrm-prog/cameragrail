@@ -39,6 +39,10 @@ export interface Camera {
   price_source: string;
   published: boolean;
   view_count: number;
+  source_url?: string | null;
+  source_attribution?: string | null;
+  source_license?: string | null;
+  external_ids?: Record<string, string> | null;
 }
 
 export interface ConditionValue {
